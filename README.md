@@ -203,12 +203,12 @@ SVIs.
 
 ### OSPF
 Two ospf process are used. 1 for underlay and 10 for overlay.
-![Topology](screenshots/Topology.png)
+![OSPF process](screenshots/OSPF_process.png)
 
 
 ### SSH
 ![SSH from Admin PC](screenshots/SSH_adminpc.png)
-![OSPF process](screenshots/OSPF_process.png)
+![SSH from staff](screenshots/SSH_staffpc.png)
 
 ### Access to webserver and DHCP server
 ![DHCP IP assigned](screenshots/DHCPIP.png)
