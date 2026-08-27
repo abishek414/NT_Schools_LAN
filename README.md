@@ -11,8 +11,9 @@ IPsec site-to-site VPN is used to give the three sites private, encrypted
 connectivity across that public network - while each site still uses its
 own connection for normal internet access.
 
-This Packet Tracer project (`NT_Schools_LAN.pkt`) designs and configures
-that network end to end.
+In this project many networking concept like HSRP,VLAN,STP,OSPF,Etherchannel,NAT are used but 
+the project is made to show the knowledge regarding site to site VPN and Secure remote
+login. So, those networking topic will be discussed more.
 
 ## Objectives
 
@@ -73,6 +74,7 @@ back to HQ. Three VLANs (Management, Staff, Students).
 
 - Webserver network (vlan 80) - 172.16.5.104/30
 - two switch layer 3 connection (vlan 91)=172.16.5.108/30
+- Loopback0 IP for edge router= 172.16.6.1/32
 
 ### School-A - 172.17.0.0/17
 
@@ -83,6 +85,7 @@ back to HQ. Three VLANs (Management, Staff, Students).
 edge_router - switch1=
  172.17.2.80/30
 edge_router - switch 2=172.17.2.84/30
+Loopback0 IP address for SchoolA_edge router= 172.17.3.1/32
 
 ### School-B - 172.18.0.0/16
 
@@ -92,6 +95,9 @@ edge_router - switch 2=172.17.2.84/30
 Edge-router - router 1=172.18.2.80/30
 Edge_router - router 2=172.18.2.84/30
 roouter1 - router 2= 172.18.2.88/30
+Loopback0 IP address for SchoolB_edge router= 172.18.3.1/32
+Loopback0 IP address for SchoolB_Router1= 172.18.3.2/32
+Loopback0 IP address for SchoolB_Router2= 172.18.3.3/32
 ### Overlay Tunnel Addressing (GRE, hub-and-spoke)
 
 - HQ to School-A - 10.255.1.0/30 - HQ 10.255.1.1 - School-A 10.255.1.2
@@ -130,9 +136,9 @@ The plan was also to use IPsec transport mode (slightly more efficient since GRE
 Each router also needed its security license enabled before any encryption commands would work, using `license boot module c2900 technology-package securityk9` followed by a reload.
 
 ## SSH
-The devices on all school LAN can be configured through ssh using following ip address.
+The devices on all school LAN can be configured through ssh from admin PC using following ip address.
 ### HQ LAN
-HQ_edge router = 172.16.5.97
+HQ_edge router = 172.16.6.1
 Multilayer Switch 1=  172.16.5.83
 Multilayer Switch 2= 172.16.5.82
 HQ_Switch1= 172.16.5.84
@@ -141,16 +147,79 @@ HQ_Switch3= 172.16.5.86
 HQ_Switch4= 172.16.5.87
 
 ### School A
-SchoolA_edge router= 172.17.2.81
+SchoolA_edge router=  172.17.3.1
 SchoolA_Mswitch1= 172.17.2.67
 SchoolA_Mswitch2=  172.17.2.66
 schoola_switch1= 172.17.2.68
 schoola_switch2= 172.17.2.69
 
 ### SchoolB
-schoolB_edge router= 172.18.2.81
-schoolB_Router1= 172.18.2.81
-schoolB_Router2= 172.18.2.86
+schoolB_edge router= 172.18.3.1
+schoolB_Router1= 172.18.3.2
+schoolB_Router2= 172.18.3.3
 schoolB_switch1= 172.18.2.68
 schoolB_switch2= 172.18.2.69
+
+## Student/Guest Network Access Restriction
+
+Student devices (at all three sites) and Guest/Wi-Fi devices (at HQ) are
+limited to internet browsing and access to the shared DNS, DHCP, and
+internal web server. They cannot reach any staff, admin, HR, finance, or
+server resources, and cannot reach any other site's internal network.
+This keeps student and guest traffic isolated from all sensitive internal
+systems while still giving them normal internet and basic network
+services.
+
+## Additional Notes
+
+**Overlay routing:** Two OSPF processes per site - `ospf 1` (LAN-facing)
+and `ospf 10` (owns tunnels, forms the inter-site adjacency) - mutually
+redistributed (`redistribute ospf 10 subnets` under `ospf 1` and vice
+versa) so tunnel-learned routes reach local LAN devices, not just the
+edge router.
+
+**NAT:** PAT overload for internet traffic; a NAT-exemption ACL denies
+translation for inter-site LAN traffic (so it stays real and routes over
+the encrypted tunnel) and permits everything else.
+
+**Hardening:** enable secret and  SSH-only VTY (RSA keys,
+Telnet disabled), VTY access restricted to the admin VLAN via
+`access-class`.
+
+**Loopbacks:** each edge router (and School B's internal routers) uses a
+`/32` Loopback0 as a stable SSH/management target, independent of any
+physical interface state.
+
+**Lesson learned:** Mismatched OSPF wildcard masks between the two
+processes on a router can leave a subnet covered by only one process; a
+switch left as an L2 switchport (or missing global `ip routing`) will
+silently break L3 forwarding to its downstream VLANs even with correct
+SVIs.
+
+## Some images for verification of project success
+
+### Topology
+![Topology](screenshots/Topology.png)
+
+### OSPF
+Two ospf process are used. 1 for underlay and 10 for overlay.
+![Topology](screenshots/Topology.png)
+
+
+### SSH
+![SSH from Admin PC](screenshots/SSH_adminpc.png)
+![OSPF process](screenshots/OSPF_process.png)
+
+### Access to webserver and DHCP server
+![DHCP IP assigned](screenshots/DHCPIP.png)
+![HQ Guest - internal access blocked](screenshots/HQ_guest.png)
+![HQ Guest - internal web server access](screenshots/HQ_guest1.png)
+![HQ Guest - internet server access](screenshots/HQ_guest2.png)
+![School A Student - internet server access](screenshots/SchoolA_student.png)
+![School A Student - internal web server access](screenshots/SchoolA_student1.png)
+![School A Student - internal access blocked](screenshots/SchoolA_student2.png)
+
+
+
+
 
